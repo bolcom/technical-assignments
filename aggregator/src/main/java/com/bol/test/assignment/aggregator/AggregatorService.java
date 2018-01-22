@@ -12,6 +12,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 public class AggregatorService {
+
     private OrderService orderService;
     private OfferService offerService;
     private ProductService productService;
@@ -23,7 +24,21 @@ public class AggregatorService {
     }
 
     public EnrichedOrder enrich(int sellerId) throws ExecutionException, InterruptedException {
-       return null;
+        Order order;
+        order = orderService.getOrder(sellerId);
+        Offer offer;
+        try {
+            offer = offerService.getOffer(order.getOfferId());
+        } catch (RuntimeException e) {
+            offer = new Offer(-1, OfferCondition.UNKNOWN);
+        }
+        Product product;
+        try {
+            product = productService.getProduct(order.getProductId());
+        } catch (RuntimeException e) {
+            product = new Product(-1, null);
+        }
+        return combine(order, offer, product);
     }
 
     private EnrichedOrder combine(Order order, Offer offer, Product product) {
