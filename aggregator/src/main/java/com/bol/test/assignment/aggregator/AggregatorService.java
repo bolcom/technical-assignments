@@ -10,8 +10,12 @@ import com.bol.test.assignment.product.ProductService;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class AggregatorService {
+
+    private final Logger LOGGER = LoggerFactory.getLogger(this.getClass());
 
     private OrderService orderService;
     private OfferService offerService;
@@ -24,21 +28,42 @@ public class AggregatorService {
     }
 
     public EnrichedOrder enrich(int sellerId) throws ExecutionException, InterruptedException {
-        Order order;
-        order = orderService.getOrder(sellerId);
-        Offer offer;
-        try {
-            offer = offerService.getOffer(order.getOfferId());
-        } catch (RuntimeException e) {
-            offer = new Offer(-1, OfferCondition.UNKNOWN);
-        }
-        Product product;
-        try {
-            product = productService.getProduct(order.getProductId());
-        } catch (RuntimeException e) {
-            product = new Product(-1, null);
-        }
+        Order order = retrieveOrder(sellerId);
+        Offer offer = retrieveOffer(order.getOfferId());
+
+        Product product = retrieveProduct(order.getProductId());
+
         return combine(order, offer, product);
+    }
+
+    private Order retrieveOrder(int sellerId) {
+        try {
+            LOGGER.debug("retrieving order with sellerId: " + sellerId);
+            return orderService.getOrder(sellerId);
+        } catch (RuntimeException e) {
+            LOGGER.error("Can't retrieve order with sellerId: " + sellerId);
+            throw new RuntimeException("Invalid order!!!");
+        }
+    }
+
+    private Offer retrieveOffer(int offerId) {
+        try {
+            LOGGER.debug("retrieving offer with offerId: " + offerId);
+            return offerService.getOffer(offerId);
+        } catch (RuntimeException e) {
+            LOGGER.error("Can't retrieve offer with orderId: " + offerId);
+            return new Offer(-1, OfferCondition.UNKNOWN);
+        }
+    }
+
+    private Product retrieveProduct(int productId) {
+        try {
+            LOGGER.debug("retrieving product with productId: " + productId);
+            return productService.getProduct(productId);
+        } catch (RuntimeException e) {
+            LOGGER.error("Can't retrieve product with productId: " + productId);
+            return new Product(-1, null);
+        }
     }
 
     private EnrichedOrder combine(Order order, Offer offer, Product product) {
