@@ -9,13 +9,9 @@ import com.bol.test.assignment.product.Product;
 import com.bol.test.assignment.product.ProductService;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.BiFunction;
-import java.util.function.Function;
-import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,68 +32,44 @@ public class AggregatorService {
 
     public EnrichedOrder enrich(int sellerId) throws ExecutionException, InterruptedException {
         return retrieveOrder(sellerId)
-                .thenComposeAsync(new Function<Order, CompletionStage<EnrichedOrder>>() {
-                    @Override
-                    public CompletionStage<EnrichedOrder> apply(Order order) {
-                        return retrieveOffer(order.getOfferId())
-                                .thenCombineAsync(retrieveProduct(order.getProductId()), new BiFunction<Offer, Product, EnrichedOrder>() {
-                                    @Override
-                                    public EnrichedOrder apply(Offer offer, Product product) {
-                                        return combine(order, offer, product);
-                                    }
-                                });
-                    }
-                }).join();
+                .thenComposeAsync((Order order)
+                        -> retrieveOffer(order.getOfferId())
+                        .thenCombineAsync(retrieveProduct(order.getProductId()),
+                                (Offer offer, Product product)
+                                -> combine(order, offer, product)))
+                .join();
     }
 
     private CompletableFuture<Order> retrieveOrder(int sellerId) {
-        return CompletableFuture.supplyAsync(new Supplier<Order>() {
-            @Override
-            public Order get() {
-                LOGGER.debug("retrieving order with sellerId: " + sellerId);
-                return orderService.getOrder(sellerId);
-            }
+        return CompletableFuture.supplyAsync(() -> {
+            LOGGER.debug("retrieving order with sellerId: " + sellerId);
+            return orderService.getOrder(sellerId);
         }, executorService)
-                .exceptionally(new Function<Throwable, Order>() {
-                    @Override
-                    public Order apply(Throwable throwable) {
-                        LOGGER.error("Can't retrieve order with sellerId: " + sellerId);
-                        throw new RuntimeException("Invalid order!!!");
-                    }
+                .exceptionally((Throwable throwable) -> {
+                    LOGGER.error("Can't retrieve order with sellerId: " + sellerId);
+                    throw new RuntimeException("Invalid order!!!");
                 });
     }
 
     private CompletableFuture<Offer> retrieveOffer(int offerId) {
-        return CompletableFuture.supplyAsync(new Supplier<Offer>() {
-            @Override
-            public Offer get() {
-                LOGGER.debug("retrieving offer with offerId: " + offerId);
-                return offerService.getOffer(offerId);
-            }
+        return CompletableFuture.supplyAsync(() -> {
+            LOGGER.debug("retrieving offer with offerId: " + offerId);
+            return offerService.getOffer(offerId);
         }, executorService)
-                .exceptionally(new Function<Throwable, Offer>() {
-                    @Override
-                    public Offer apply(Throwable throwable) {
-                        LOGGER.error("Can't retrieve offer with orderId: " + offerId);
-                        return new Offer(-1, OfferCondition.UNKNOWN);
-                    }
+                .exceptionally((Throwable throwable) -> {
+                    LOGGER.error("Can't retrieve offer with orderId: " + offerId);
+                    return new Offer(-1, OfferCondition.UNKNOWN);
                 });
     }
 
     private CompletableFuture<Product> retrieveProduct(int productId) {
-        return CompletableFuture.supplyAsync(new Supplier<Product>() {
-            @Override
-            public Product get() {
-                LOGGER.debug("retrieving product with productId: " + productId);
-                return productService.getProduct(productId);
-            }
+        return CompletableFuture.supplyAsync(() -> {
+            LOGGER.debug("retrieving product with productId: " + productId);
+            return productService.getProduct(productId);
         }, executorService)
-                .exceptionally(new Function<Throwable, Product>() {
-                    @Override
-                    public Product apply(Throwable throwable) {
-                        LOGGER.error("Can't retrieve product with productId: " + productId);
-                        return new Product(-1, null);
-                    }
+                .exceptionally((Throwable throwable) -> {
+                    LOGGER.error("Can't retrieve product with productId: " + productId);
+                    return new Product(-1, null);
                 });
     }
 
