@@ -102,6 +102,12 @@ public class AggregatorService {
     }
 
     private EnrichedOrder combine(Order order, Offer offer, Product product) {
-        return new EnrichedOrder(order.getId(), offer.getId(), offer.getCondition(), product.getId(), product.getTitle());
+        return new EnrichedOrder.EnrichedOrderBuilder()
+                .id(order.getId())
+                .offerId(offer.getId())
+                .offerCondition(offer.getCondition())
+                .productId(product.getId())
+                .productTitle(product.getTitle())
+                .build();
     }
 }
