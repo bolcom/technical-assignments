@@ -29,7 +29,6 @@ public class AggregatorServiceTest {
 
     private AggregatorService aggregatorService = new AggregatorService(orderService, offerService, productService);
 
-
     private final int sellerId = 1;
     private final int orderId = 2;
     private final int offerId = 3;
@@ -42,9 +41,12 @@ public class AggregatorServiceTest {
         when(offerService.getOffer(offerId)).thenReturn(new Offer(offerId, AS_NEW));
         when(productService.getProduct(productId)).thenReturn(new Product(productId, title));
 
-
         EnrichedOrder enrichedOrder = aggregatorService.enrich(sellerId);
         assertThat(enrichedOrder.getId(), is(orderId));
+        assertThat(enrichedOrder.getOfferId(), is(offerId));
+        assertThat(enrichedOrder.getOfferCondition(), is(AS_NEW));
+        assertThat(enrichedOrder.getProductId(), is(productId));
+        assertThat(enrichedOrder.getProductTitle(), is(title));
     }
 
     @Test(timeout = 2000)
@@ -63,10 +65,11 @@ public class AggregatorServiceTest {
                 }
         );
 
-
         EnrichedOrder enrichedOrder = aggregatorService.enrich(sellerId);
         assertThat(enrichedOrder.getId(), is(orderId));
+        assertThat(enrichedOrder.getOfferId(), is(offerId));
         assertThat(enrichedOrder.getOfferCondition(), is(AS_NEW));
+        assertThat(enrichedOrder.getProductId(), is(productId));
         assertThat(enrichedOrder.getProductTitle(), is(title));
     }
 
